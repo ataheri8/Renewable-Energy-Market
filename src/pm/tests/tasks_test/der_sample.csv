@@ -1,0 +1,2 @@
+program_id,enrollment_program_type,enrollment_status,enrollment_contract_type,service_provider,der_id,contract_status
+123,GENERIC,ACCEPTED,enrollment_contract_type,service_provider,der_id,ACTIVE

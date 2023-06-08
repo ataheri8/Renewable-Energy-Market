@@ -1,0 +1,2 @@
+﻿DER ID,Default Limits - Active Power Import (kW) (optional),Default Limits - Active Power Export (kW) (optional),Default Limits - Reactive Power Import (kW) (optional),Default Limits - Reactive Power Export (kW) (optional),Import Target capacity (kW) (optional),Export Target Capacity (kW) (optional)
+1001,50,50,50,50,20,20

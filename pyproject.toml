@@ -1,0 +1,176 @@
+# Poetry Configuration
+# -----------------------------------------------
+
+[tool.poetry]
+name = "program-mgmt-core"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+flask-smorest = "^0.39.0"
+python-dotenv = "^0.20.0"
+SQLAlchemy = "^2.0.0"
+psycopg2-binary = "^2.9.4"
+python-json-logger = "^2.0.4"
+pendulum = "^2.1.2"
+phonenumbers = "^8.13.0"
+flask-cors = "^3.0.10"
+kafka-python3 = "^3.0.0"
+factory-boy = "^3.2.1"
+testfixtures = "^7.0.4"
+requests-mock = "^1.10.0"
+minio = "^7.1.13"
+gunicorn = "^20.1.0"
+dataclasses-json = "^0.5.7"
+pytest-freezer = "^0.4.6"
+confluent-kafka = "^2.0.2"
+lxml = "^4.9.2"
+apscheduler = "^3.10.1"
+
+
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+poetry-audit-plugin = "^0.1.1"
+liccheck = "^0.7.2"
+invoke = "^1.7.1"
+black = "^23.1.0"
+mypy = "^1.1.1"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+autoflake = "^2.0.2"
+flake8-bugbear = "^23.3.23"
+bandit = "^1.7.4"
+ossaudit = { version = "0.*", allow-prereleases = true }
+
+[tool.poetry.scripts]
+audit = "poetry_scripts:audit"
+
+[tool.poetry.group.dev.dependencies]
+colorama = "^0.4.6"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# -----------------------------------------------
+
+[tool.black]
+target-version = ['py310']
+line-length = 100
+
+
+[tool.autoflake]
+remove-all-unused-imports = true
+remove-unused-variables = true
+
+
+[tool.coverage.run]
+branch = true
+[tool.coverage.report]
+exclude_lines = ['\(Error\)', '\(TypedDict\)']
+precision = 2
+omit = [
+    "**/worker.py",
+    "**/models/**",
+    "**/enums.py",
+    "**/restapi/validators.py",
+    "**/restapi/**/validators/**",
+    "**/restapi/web.py",
+    "**/restapi/exceptions.py",
+    "**/base.py",
+    "**/seed/**",
+    "**/factories.py",
+    "**/docs/**",
+    "**/tests/**",
+    "**/tests_acceptance/**",
+    "**/scheduler.py",
+    "**/hey_bim.py",
+    "pm/bucket_watcher.py",
+]
+
+
+[tool.isort]
+profile = "black"
+
+
+[tool.mypy]
+plugins = "sqlalchemy.ext.mypy.plugin"
+exclude = "/tests/*"
+ignore_missing_imports = true
+[[tool.mypy.overrides]] # https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file
+module = [
+    "alembic.*",
+    "apispec_oneofschema.*",
+    "apispec_webframeworks.*",
+    "apispec.*",
+    "arrow.*",
+    "boto3.*",
+    "botocore.*",
+    "celery.*",
+    "CIM15.*",
+    "CIM16.*",
+    "cimgraph",
+    "elasticapm.*",
+    "isoduration.*",
+    "kombu.*",
+    "marshmallow_oneofschema",
+    "network_converters.*",
+    "network_reduction.*",
+    "networkx.*",
+    "opusdbclient",
+    "opusone_microservice.*",
+    "pandas.*",
+    "pika.*",
+    "psycopg2.*",
+    "PyCIM.*",
+    "pycimgraph.*",
+    "tenacity.*",
+    "timezonefinder.*",
+    "webargs.*",
+    "xlsxwriter.*",
+]
+ignore_missing_imports = true
+
+
+[tool.liccheck]
+authorized_licenses = [
+    "BSD",
+    "BSD-3-Clause",
+    "MIT",
+    "License :: OSI Approved :: MIT",
+    "Apache Software",
+    "Mozilla Public License 2.0 (MPL 2.0)",
+    "LGPLv3+",
+    "LGPLv3",
+    "public domain",
+    "Python Software Foundation",
+    "ISC License (ISCL)",
+]
+unauthorized_licenses = ["GPL v3"]
+[tool.liccheck.authorized_packages]
+network-converters = "*"
+network-reduction = "*"
+optimization-engine = "*"
+opusdbclient = "*"
+opusone-microservice = "*"
+pycimgraph = "*"
+statecompare = "*"
+better-exceptions = "*"
+psycopg2-binary = "*"
+ascii-cim = "*"
+
+
+# Enable this if you want log output in pytest.
+# Alternatively, you can also run `pytest -v -o log_cli=true`
+# ---
+[tool.pytest.ini_options]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::UserWarning"]
+
+
+#log_cli = "True"
+#log_cli_level = "INFO"

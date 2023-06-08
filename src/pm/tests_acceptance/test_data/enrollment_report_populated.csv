@@ -1,0 +1,3 @@
+Program Name,DER ID,Service Provider ID,Enrollment Time,Enrollment User ID,Enrollment Status,Rejection Reason
+program_1,der_1,1,2022-11-07T00:00:00+00:00,,REJECTED,DER eligibility data not found in the DER Warehouse
+program_1,der_2,1,2022-11-07T06:21:59+00:00,,ACCEPTED,

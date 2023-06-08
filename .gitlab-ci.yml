@@ -1,0 +1,187 @@
+# GitLab CI/CD Configuration
+#
+# Virtual Environment
+# - install and cache the virtual environment
+#
+# Static Analysis
+# - lint and format:
+#     - Python formatting: isort, flake8, and black
+#     - Python linting: mypy
+# - security scan: bandit
+#
+# Test
+# - unit, functional, and integration testing: pytest
+# - dependency scan: ossaudit
+# - license scan: liccheck
+#
+# Build
+# - documentation: mkdocs
+# - build and push latest image to GE Artifactory
+#
+# Publish
+# - build and push tagged image to GE Artifactory
+# - build and push tagged helm chart to GE Artifactory
+
+image: ${GE_ARTIFACTORY_REGISTRY}/base/python:3.10-ubi8-minimal-latest
+
+variables:
+  # GE Artifactory Settings:
+  # ------------------------
+  GE_ARTIFACTORY_INDEX: https://dig-grid-artifactory.apps.ge.com/artifactory/api/pypi/opus-one-pypi-virtual/simple
+  GE_ARTIFACTORY_REGISTRY: dig-grid-artifactory.apps.ge.com/opus-one-docker
+  GE_ARTIFACTORY_IMAGE_REPO: dig-grid-artifactory.apps.ge.com/opus-one-docker-snapshot/zeus/pm-core
+  GE_ARTIFACTORY_INIT_IMAGE_REPO: dig-grid-artifactory.apps.ge.com/opus-one-docker-snapshot/zeus/flyway
+  GE_ARTIFACTORY_IMAGE_RELEASE_REPO: dig-grid-artifactory.apps.ge.com/opus-one-docker/zeus/pm-core
+  GE_ARTIFACTORY_INIT_IMAGE_RELEASE_REPO: dig-grid-artifactory.apps.ge.com/opus-one-docker/zeus/flyway
+
+# -----------------------------------------------
+
+stages:
+  - venv
+  - static-analysis
+  - code-scanning
+  - testing
+  - build
+  - deploy
+
+cache:
+  # by default, jobs can only pull from the cache
+  policy: pull
+  paths:
+    - .cache/poetry
+    - .venv/
+
+.venv: &venv
+  - pip install poetry
+  - poetry config repositories.artifactory $GE_ARTIFACTORY_INDEX
+  - poetry config http-basic.artifactory $GE_GRID_ARTIFACTORY_USER $GE_GRID_ARTIFACTORY_PW
+  - poetry config virtualenvs.in-project true
+  - poetry config cache-dir "$CI_PROJECT_DIR/.cache/poetry"
+  - poetry install -v
+
+cache-venv:
+  stage: venv
+  script:
+    - *venv
+  cache:
+    # override the default caching policy so that the virtual env is cached
+    policy: pull-push
+  rules:
+    # Run jobs on scheduled events
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    # Run job on merge request events
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+static-analysis:
+  stage: static-analysis
+  before_script:
+    - *venv
+  script:
+    - poetry run invoke linting.lint --check-only=True
+    - poetry run invoke linting.type-check
+  rules:
+    # Only run on MR events
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+unit-and-acceptance-tests:
+  image: docker:23.0.4-dind
+  stage: testing
+  services:
+    - docker:dind
+  variables:
+    LOCATIONS: filesystem:/flyway/sql
+  script:
+    - ./docker/scripts/manage_docker.sh
+  rules:
+    # Only run on MR events
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# -----------------------------------------------
+
+#security-scan:
+#  stage: code-scanning
+#  <<: *venv
+#  script:
+#    - poetry export -o requirements.txt --with dev --without-hashes
+#    - poetry run audit
+#  rules:
+#    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+#license-scan:
+#  stage: code-scanning
+#  <<: *venv
+#  script:
+#    - poetry export -o requirements.txt --without-hashes
+#    - poetry run liccheck -r requirements.txt --reporting docs/licenses.txt
+#  artifacts:
+#    when: on_success
+#    paths:
+#      - docs
+#  rules:
+#    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+.docker:
+  image: docker:20.10.19
+  stage: build
+  script:
+    - |
+      set -e
+      echo "Building '${IMAGE_TAG}' docker  image"
+      docker build -t ${IMAGE_TAG} --label commit=$CI_COMMIT_SHA -f ./docker/Dockerfile .
+      echo "Building '${INIT_IMAGE_TAG}' docker image"
+      docker build -t ${INIT_IMAGE_TAG} --label commit=$CI_COMMIT_SHA -f ./docker/database-init.Dockerfile .
+      echo "Pushing docker image ${IMAGE_TAG}"
+      docker push ${IMAGE_TAG}
+      echo "Pushing docker image ${INIT_IMAGE_TAG}"
+      docker push ${INIT_IMAGE_TAG}
+  cache: []
+
+build-and-push-docker:
+  extends: .docker
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+      when: manual
+  variables:
+    IMAGE_TAG: ${GE_ARTIFACTORY_IMAGE_REPO}:latest
+    INIT_IMAGE_TAG: ${GE_ARTIFACTORY_INIT_IMAGE_REPO}:pm-latest
+
+build-and-push-docker-tags:
+  # automatic build and push on tagging (to release repo)
+  extends: .docker
+  variables:
+    IMAGE_TAG: $GE_ARTIFACTORY_IMAGE_RELEASE_REPO:backend-${CI_COMMIT_TAG}
+    INIT_IMAGE_TAG: ${GE_ARTIFACTORY_INIT_IMAGE_RELEASE_REPO}:backend-${CI_COMMIT_TAG}
+  only:
+    - tags
+
+# deploy-foundation-dev-env:
+#   stage: deploy
+#   rules:
+#     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+#       when: always
+#   needs:
+#     - build-and-push-docker
+#   variables:
+#     ENVIRONMENT: foundation-dev
+#     NAMESPACE: pm
+#     PRUNE: "false"
+#     UPGRADE: backend
+#     HELM_VERSION: 0.0.0-latest
+#     IMAGE_TAG: backend-${CI_COMMIT_SHORT_SHA}
+#   trigger:
+#     strategy: depend
+#     project: "opusonesolutions/zeus/program-mgmt/program-manager-deployments"
+deploy-foundation-qa-env:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  needs:
+    - build-and-push-docker
+  variables:
+    ENVIRONMENT: foundation-qa
+    NAMESPACE: pm
+    PRUNE: "false"
+    APP: backend
+  trigger:
+    strategy: depend
+    project: "opusonesolutions/zeus/program-mgmt/program-manager-deployments"

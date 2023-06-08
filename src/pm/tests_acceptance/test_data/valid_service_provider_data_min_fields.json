@@ -1,0 +1,11 @@
+{
+    "general_fields": {
+        "name": "name",
+        "service_provider_type": "AGGREGATOR",
+        "status": "ACTIVE"
+    },
+    "primary_contact": {
+        "email_address": "mlh@ge.com",
+        "phone_number": "905-444-5566"
+    }
+}

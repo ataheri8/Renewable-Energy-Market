@@ -1,0 +1,6 @@
+general_fields.name,general_fields.status,general_fields.service_provider_type,primary_contact.email_address,primary_contact.phone_number,address.street,address.city,address.state,address.country,address.zip_code
+John Doe,ACTIVE,,mlh@ge.com,905-444-5566,123 Street,NoCity,NoState,NoCountry,A1B2C3
+Wayne Morris,ACTIVE,,lauren18@example.net,487.441.7707x39301,92349 Susan Ports,Port Brian,Tennessee,Bahrain,94291
+Bradley Gentry,,,johnsondesiree@example.org,401-006-6788,828 Victoria Roads,Lynchville,Idaho,Saint Barthelemy,99172
+Michael Lewis,ACTIVE,,davidstanton@example.com,,966 Crane Corner Suite 740,,New Jersey,Greece,74686
+Gary Juarez,ACTIVE,,,

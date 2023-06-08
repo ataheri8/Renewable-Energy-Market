@@ -1,0 +1,485 @@
+version: "3"
+name: "pmcore"
+
+networks:
+  core:
+    name: $NETWORK_NAME
+    driver: bridge
+
+services:
+  zookeeper:
+    platform: linux/amd64
+    container_name: zookeeper
+    # image: dig-grid-artifactory.apps.ge.com/virtual-docker/strimzi/kafka:latest-kafka-2.6.0
+    image: docker.io/bitnami/zookeeper:latest
+    restart: on-failure
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "32181:2181"
+    profiles: [ "all", "dev" ]
+    networks:
+      - core
+
+  kafka:
+    platform: linux/amd64
+    container_name: kafka
+    image: docker.io/bitnami/kafka:3.4.0-debian-11-r20
+    restart: on-failure
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opt/bitnami/kafka/bin/kafka-topics.sh",
+          "--bootstrap-server",
+          "kafka:29092",
+          "--list"
+        ]
+      start_period: 1s
+      timeout: 45s
+      interval: 2s
+      retries: 20
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+    environment:
+      LOG_DIR: /tmp/logs
+      LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://${KAFKA_LISTENER}:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_ZOOKEEPER_TIMEOUT_MS: 16000
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    profiles: [ "all", "dev" ]
+    networks:
+      - core
+
+  kafka-ui:
+    platform: linux/amd64
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    restart: on-failure
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: kafka
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    profiles: [ "all", "dev" ]
+    networks:
+      - core
+
+  postgresdb:
+    platform: linux/amd64
+    container_name: $PG_CONTAINER_NAME
+    # image: dig-grid-artifactory.apps.ge.com/virtual-docker/acid/spilo-cdp-12:1.6-p128
+    image: "bitnami/postgresql:14"
+    restart: on-failure
+    ports:
+      - "$DB_PORT:$DB_PORT"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-q",
+          "-h",
+          "postgresdb",
+          "-d",
+          "postgres",
+          "-U",
+          "${DB_USERNAME}",
+          "-p",
+          "$DB_PORT"
+        ]
+      start_period: 10s
+      timeout: 45s
+      interval: 2s
+      retries: 20
+    environment:
+      - POSTGRESQL_USERNAME=$DB_USERNAME
+      - POSTGRESQL_PASSWORD=$DB_PASSWORD
+      - POSTGRESQL_DATABASE=$DB_NAME
+      - POSTGRESQL_PORT_NUMBER=$DB_PORT
+    profiles: [ "testing", "all", "dev", "ci", "audit", "messaging"]
+    networks:
+      - core
+
+  db-migrations:
+    platform: linux/amd64
+    container_name: $DB_MIGRATION_CONTAINER_NAME
+    build:
+      context: ../
+      dockerfile: ./docker/database-init.Dockerfile
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    environment:
+      - DB_USERNAME=$DB_USERNAME
+      - DB_PASSWORD=$DB_PASSWORD
+      - DB_HOST=postgresdb
+      - DB_NAME=$DB_NAME
+      - DB_PORT=$DB_PORT
+      - DROP_DB="false"
+      - LOCATIONS=filesystem:/opt/pm-core/pm/migrations/
+    profiles: [ "testing", "all", "dev", "ci" ]
+    networks:
+      - core
+
+  audit-db-migrations:
+    platform: linux/amd64
+    container_name: audit-db-migrations
+    build:
+      context: ../../audit-logging-service/
+      dockerfile: ./docker/database-init.Dockerfile
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    environment:
+      - DB_USERNAME=$DB_USERNAME
+      - DB_PASSWORD=$DB_PASSWORD
+      - DB_HOST=postgresdb
+      - DB_NAME=auditlogs
+      - DB_PORT=$DB_PORT
+      - DROP_DB="false"
+      - LOCATIONS=filesystem:/opt/auditlogs/migrations/
+    profiles: ["all","audit"]
+    networks:
+      - core
+
+
+  messaging-db-migrations:
+    platform: linux/amd64
+    container_name: messaging-db-migrations
+    build:
+      context: ../../messaging-service/
+      dockerfile: ./docker/database-init.Dockerfile
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    environment:
+      - DB_USERNAME=$DB_USERNAME
+      - DB_PASSWORD=$DB_PASSWORD
+      - DB_HOST=postgresdb
+      - DB_NAME=messaging
+      - DB_PORT=$DB_PORT
+      - DROP_DB="false"
+      - LOCATIONS=filesystem:/opt/ms-core/migrations/
+    profiles: ["all","messaging"]
+    networks:
+      - core
+
+
+  minio:
+    platform: linux/amd64
+    # TODO use GE image
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:9000/minio/health/live"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: gridosgridos
+      MINIO_ROOT_PASSWORD: gridosgridos
+      MINIO_ACCESS_KEY: gridosgridos
+      MINIO_SECRET_KEY: gridosgridos
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    profiles: [ "all", "dev" ]
+    networks:
+      - core
+
+  base_pm_service:
+    platform: linux/amd64
+    build:
+      context: ../
+      dockerfile: ./docker/Dockerfile
+      args:
+        # GE_GRID_ARTIFACTORY_USER: ${GE_GRID_ARTIFACTORY_USER}
+        # GE_GRID_ARTIFACTORY_PW: ${GE_GRID_ARTIFACTORY_PW}
+        POETRY_PACKAGE_OPT: "--with=dev"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db-migrations:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+    environment:
+      - FLASK_APP=pm.restapi.web
+      - FLASK_RUN_PORT=3001
+      - DEV_MODE=true
+      - DER_WAREHOUSE_URL=http://localhost:3002
+      - DB_USERNAME=$DB_USERNAME
+      - DB_PASSWORD=$DB_PASSWORD
+      - DB_HOST=postgresdb
+      - DB_NAME=$DB_NAME
+      - DB_PORT=$DB_PORT
+      - KAFKA_URL=kafka:9092
+      - KAFKA_GROUP_ID=$KAFKA_GROUP_ID
+      - MINIO_END_POINT=minio:9000
+      - MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY
+      - MINIO_SECRET_KEY=$MINIO_SECRET_KEY
+    profiles: [ "none" ]
+    networks:
+      - core
+
+  api:
+    extends:
+      service: base_pm_service
+    container_name: api
+    environment:
+      - TASK_TO_RUN=api
+    ports:
+      - "3001:3001"
+    volumes:
+      - ../src:/opt/pm-core/src
+    profiles: [ "all" ]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:3001/api/system/health-check"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  testing:
+    extends:
+      service: base_pm_service
+    container_name: $TESTING_CONTAINER_NAME
+    environment:
+      - TASK_TO_RUN=pytest
+    profiles: [ "ci" ]
+
+  worker:
+    extends:
+      service: base_pm_service
+    depends_on:
+      api:
+        condition: service_healthy
+    container_name: worker
+    volumes:
+      - ../src:/opt/pm-core/src
+    environment:
+      - TASK_TO_RUN=worker
+    profiles: [ "all" ]
+
+  batch-worker:
+    extends:
+      service: worker
+    container_name: batch-worker
+    environment:
+      - CONSUMER_TYPE=batch
+
+  scheduler:
+    extends:
+      service: base_pm_service
+    depends_on:
+      api:
+        condition: service_healthy
+    container_name: scheduler
+    volumes:
+      - ../src:/opt/pm-core/src
+    environment:
+      - TASK_TO_RUN=scheduler
+    profiles: [ "all" ]
+
+  bucket_watcher:
+    extends:
+      service: base_pm_service
+    depends_on:
+      api:
+        condition: service_healthy
+    container_name: bucket_watcher
+    volumes:
+      - ../src:/opt/pm-core/src
+    environment:
+      - TASK_TO_RUN=bucket_watcher
+    profiles: [ "all" ]
+
+  base_derwh_service:
+    platform: linux/amd64
+    build:
+      context: ../../der-warehouse/
+      dockerfile: ./docker/Dockerfile.local
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgresdb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      - FLASK_APP=derwh.restapi.web
+      - FLASK_RUN_PORT=3002
+      - DEV_MODE=true
+      - DER_WAREHOUSE_URL=http://localhost:3002
+      - DB_USERNAME=gridos
+      - DB_PASSWORD=gridos
+      - DB_HOST=postgresdb
+      - DB_NAME=derwh
+      - DB_PORT=$DB_PORT
+      - KAFKA_URL=kafka:9092
+      - KAFKA_GROUP_ID=mygroup
+      - MINIO_END_POINT=minio:9000
+      - MINIO_ACCESS_KEY=gridosgridos
+      - MINIO_SECRET_KEY=gridosgridos
+    profiles: [ "none" ]
+    networks:
+      - core
+
+  audit_log_service:
+    platform: linux/amd64
+    container_name: audit_log_service
+    ports:
+      - "3003:3003"
+    build:
+      context: ../../audit-logging-service/
+      dockerfile: ./docker/Dockerfile
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    environment:
+      - FLASK_RUN_PORT=3003
+      - DEV_MODE=true
+      - ALS_DB_USERNAME=$DB_USERNAME
+      - ALS_DB_PASSWORD=$DB_PASSWORD
+      - ALS_DB_HOST=postgresdb
+      - ALS_DB_NAME=auditlogs
+      - ALS_DB_PORT=$DB_PORT
+
+    profiles: ["all","audit"]
+    networks:
+      - core
+
+  messaging_service:
+    platform: linux/amd64
+    container_name: messaging_service
+    ports:
+      - "3004:3004"
+    build:
+      context: ../../messaging-service/
+      dockerfile: ./docker/Dockerfile
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    environment:
+      - FLASK_RUN_PORT=3004
+      - DEV_MODE=true
+        DB_USERNAME=$DB_USERNAME
+      - DB_PASSWORD=$DB_PASSWORD
+      - DB_HOST=postgresdb
+      - DB_NAME=messaging
+      - DB_PORT=$DB_PORT
+
+    profiles: ["all","messaging"]
+    networks:
+      - core
+
+
+  derwh-api:
+    extends:
+      service: base_derwh_service
+    container_name: derwh-api
+    ports:
+      - "3002:3002"
+    profiles: [ "all" ]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:3002/health-check"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command:
+      [
+        "gunicorn",
+        "derwh.restapi.web:create_app()",
+        "-b",
+        "0.0.0.0:3002",
+        "--reload"
+      ]
+
+  derwh-worker:
+    extends:
+      service: base_derwh_service
+    depends_on:
+      derwh-api:
+        condition: service_healthy
+    container_name: derwh-worker
+    profiles: [ "all" ]
+    command: [ "python", "-m", "derwh.worker" ]
+
+  derwh-scheduler:
+    extends:
+      service: base_derwh_service
+    depends_on:
+      derwh-api:
+        condition: service_healthy
+    container_name: derwh-scheduler
+    profiles: [ "all" ]
+    command: [ "python", "-m", "derwh.scheduler" ]
+
+  derwh-bucket_watcher:
+    extends:
+      service: base_derwh_service
+    depends_on:
+      derwh-api:
+        condition: service_healthy
+    container_name: derwh-bucket_watcher
+    profiles: [ "all" ]
+    command: [ "python", "-m", "derwh.bucket_watcher" ]
+
+  derwh-db-migrations:
+    platform: linux/amd64
+    container_name: db-migrations-derwh
+    build:
+      context: ../../der-warehouse/
+      dockerfile: ./docker/database-init.Dockerfile
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    environment:
+      - DB_USERNAME=$DB_USERNAME
+      - DB_PASSWORD=$DB_PASSWORD
+      - DB_HOST=postgresdb
+      - DB_NAME=derwh
+      - DB_PORT=$DB_PORT
+      - DROP_DB="false"
+      - LOCATIONS=filesystem:/opt/derwh/migrations/
+    profiles: [ "all"]
+    networks:
+      - core
+
+volumes:
+  minio-data:

@@ -1,0 +1,22 @@
+{
+    "general_fields": {
+        "name": "name",
+        "service_provider_type": "AGGREGATOR",
+        "status": "ACTIVE"
+    },
+    "primary_contact": {
+        "email_address": "mlh@ge.com",
+        "phone_number": "905-444-5566"
+    },
+    "notification_contact": {
+        "email_address": "JohnDoe@ge.com",
+        "phone_number": "905-334-7766"
+    },
+    "address": {
+        "street": "123 Street",
+        "city": "NoCity",
+        "state": "NoState",
+        "country": "NoCountry",
+        "zip_code": "A1B2C3"
+    }
+}

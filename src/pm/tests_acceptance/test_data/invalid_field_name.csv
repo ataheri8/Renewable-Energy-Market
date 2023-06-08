@@ -1,0 +1,3 @@
+general_fields.full_name,fields.status,fields.service_provider_type,primary_contact.email_address,primary_contact.phone_number,address.street,address.city,address.state,address.country,address.zip_code
+John Doe,ACTIVE,AGGREGATOR,mlh@ge.com,905-444-5566,123 Street,NoCity,NoState,NoCountry,A1B2C3
+Wayne Morris,ACTIVE,AGGREGATOR,lauren18@example.net,487.441.7707x39301,92349 Susan Ports,Port Brian,Tennessee,Bahrain,94291

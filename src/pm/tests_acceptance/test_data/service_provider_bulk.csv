@@ -1,0 +1,4 @@
+Name,Type,Primary contact,Primary email,Notification contact,Notification email,Street Address,Apt/unit,City,State/Province/Region,Country,ZIP/Postal Code,Status
+Company One,RESIDENTIAL,A Smith,smith@companyone.com,,,1st Blvd,,Edmonton,Alberta,Canada,H3H 8E8,ACTIVE
+Company Two,AGGREGATOR,A Potter,potter@companytwo.com,A Potter,potter@companytwo.com,2nd Avenue,Unit 607,Edmonton,Alberta,Canada,H3H 8E8,ACTIVE
+Company Three,C_AND_I,A Primary Contact,apc@companythree.com,,,3rd street,,Edmonton,Alberta,Canada,H3H 8E8,INACTIVE

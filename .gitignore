@@ -1,0 +1,27 @@
+# Dirs
+.idea/
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.vscode/
+.robo/
+apispec/
+test_filemanager/
+
+# Files
+.DS_Store
+.coverage
+
+*.html
+*.xml
+
+# robot stuff to ignore
+log.xml
+output.xml
+report.html
+robocop.log
+
+# asyncapi docs to ignore
+docs/asyncapi_html/*
+./docker/db-data/*

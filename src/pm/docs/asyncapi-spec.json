@@ -1,0 +1,563 @@
+{
+    "asyncapi": "2.5.0",
+    "info": {
+        "title": "PM Kafka Topics",
+        "version": "0.0.1"
+    },
+    "channels": {
+        "pm.enrollment": {
+            "publish": {
+                "message": {
+                    "payload": {
+                        "$ref": "#/components/schemas/EnrollmentMessage"
+                    }
+                }
+            }
+        },
+        "pm.contract": {
+            "publish": {
+                "message": {
+                    "payload": {
+                        "$ref": "#/components/schemas/ContractMessage"
+                    }
+                }
+            }
+        },
+        "der-gateway-program": {
+            "publish": {
+                "message": {
+                    "payload": {
+                        "$ref": "#/components/schemas/DerGatewayProgramMessage"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "EnrollmentMessage": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "datetime"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "datetime"
+                    },
+                    "program_id": {
+                        "type": "integer"
+                    },
+                    "service_provider_id": {
+                        "type": "integer"
+                    },
+                    "der_id": {
+                        "type": "string"
+                    },
+                    "enrollment_status": {
+                        "type": "string",
+                        "enum": [
+                            "ACCEPTED",
+                            "REJECTED",
+                            "PENDING"
+                        ]
+                    },
+                    "dynamic_operating_envelopes": {
+                        "type": "object",
+                        "properties": {
+                            "default_limits_active_power_import_kw": {
+                                "type": "number"
+                            },
+                            "default_limits_active_power_export_kw": {
+                                "type": "number"
+                            },
+                            "default_limits_reactive_power_import_kw": {
+                                "type": "number"
+                            },
+                            "default_limits_reactive_power_export_kw": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "default_limits_active_power_export_kw",
+                            "default_limits_active_power_import_kw",
+                            "default_limits_reactive_power_export_kw",
+                            "default_limits_reactive_power_import_kw"
+                        ]
+                    },
+                    "demand_response": {
+                        "type": "object",
+                        "properties": {
+                            "import_target_capacity": {
+                                "type": "number"
+                            },
+                            "export_target_capacity": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "export_target_capacity",
+                            "import_target_capacity"
+                        ]
+                    },
+                    "rejection_reason": {
+                        "type": "string",
+                        "enum": [
+                            "DER_NOT_FOUND",
+                            "ELIGIBILITY_DATA_NOT_FOUND",
+                            "DER_DOES_NOT_MEET_CRITERIA",
+                            "DER_NOT_ASSOCIATED_WITH_SERVICE_PROVIDER"
+                        ]
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "der_id",
+                    "enrollment_status",
+                    "id",
+                    "program_id",
+                    "service_provider_id",
+                    "updated_at"
+                ]
+            },
+            "ContractMessage": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "datetime"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "datetime"
+                    },
+                    "enrollment_request_id": {
+                        "type": "integer"
+                    },
+                    "program_id": {
+                        "type": "integer"
+                    },
+                    "service_provider_id": {
+                        "type": "integer"
+                    },
+                    "der_id": {
+                        "type": "string"
+                    },
+                    "contract_status": {
+                        "type": "string",
+                        "enum": [
+                            "ACCEPTED",
+                            "ACTIVE",
+                            "EXPIRED",
+                            "USER_CANCELLED",
+                            "SYSTEM_CANCELLED"
+                        ]
+                    },
+                    "contract_type": {
+                        "type": "string",
+                        "enum": [
+                            "ENROLLMENT_CONTRACT"
+                        ]
+                    },
+                    "dynamic_operating_envelopes": {
+                        "type": "object",
+                        "properties": {
+                            "default_limits_active_power_import_kw": {
+                                "type": "number"
+                            },
+                            "default_limits_active_power_export_kw": {
+                                "type": "number"
+                            },
+                            "default_limits_reactive_power_import_kw": {
+                                "type": "number"
+                            },
+                            "default_limits_reactive_power_export_kw": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "default_limits_active_power_export_kw",
+                            "default_limits_active_power_import_kw",
+                            "default_limits_reactive_power_export_kw",
+                            "default_limits_reactive_power_import_kw"
+                        ]
+                    },
+                    "demand_response": {
+                        "type": "object",
+                        "properties": {
+                            "import_target_capacity": {
+                                "type": "number"
+                            },
+                            "export_target_capacity": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "export_target_capacity",
+                            "import_target_capacity"
+                        ]
+                    }
+                },
+                "required": [
+                    "contract_status",
+                    "contract_type",
+                    "created_at",
+                    "der_id",
+                    "enrollment_request_id",
+                    "id",
+                    "program_id",
+                    "service_provider_id",
+                    "updated_at"
+                ]
+            },
+            "DerGatewayProgramMessage": {
+                "type": "object",
+                "properties": {
+                    "program": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "program_type": {
+                                "type": "string",
+                                "enum": [
+                                    "GENERIC",
+                                    "DYNAMIC_OPERATING_ENVELOPES",
+                                    "DEMAND_MANAGEMENT"
+                                ]
+                            },
+                            "start_date": {
+                                "type": "string"
+                            },
+                            "end_date": {
+                                "type": "string"
+                            },
+                            "program_priority": {
+                                "type": "string",
+                                "enum": [
+                                    "P0",
+                                    "P1",
+                                    "P2",
+                                    "P3",
+                                    "P4",
+                                    "P5"
+                                ]
+                            },
+                            "avail_operating_months": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "integer"
+                                    },
+                                    "jan": {
+                                        "type": "boolean"
+                                    },
+                                    "feb": {
+                                        "type": "boolean"
+                                    },
+                                    "mar": {
+                                        "type": "boolean"
+                                    },
+                                    "apr": {
+                                        "type": "boolean"
+                                    },
+                                    "may": {
+                                        "type": "boolean"
+                                    },
+                                    "jun": {
+                                        "type": "boolean"
+                                    },
+                                    "jul": {
+                                        "type": "boolean"
+                                    },
+                                    "aug": {
+                                        "type": "boolean"
+                                    },
+                                    "sep": {
+                                        "type": "boolean"
+                                    },
+                                    "oct": {
+                                        "type": "boolean"
+                                    },
+                                    "nov": {
+                                        "type": "boolean"
+                                    },
+                                    "dec": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "apr",
+                                    "aug",
+                                    "dec",
+                                    "feb",
+                                    "id",
+                                    "jan",
+                                    "jul",
+                                    "jun",
+                                    "mar",
+                                    "may",
+                                    "nov",
+                                    "oct",
+                                    "sep"
+                                ]
+                            },
+                            "holiday_exclusions": {
+                                "type": "object",
+                                "properties": {
+                                    "calendars": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "mrid": {
+                                                    "type": "string"
+                                                },
+                                                "timezone": {
+                                                    "type": "string"
+                                                },
+                                                "year": {
+                                                    "type": "integer"
+                                                },
+                                                "events": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "startDate": {
+                                                                "type": "string"
+                                                            },
+                                                            "endDate": {
+                                                                "type": "string"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "category": {
+                                                                "type": "string"
+                                                            },
+                                                            "substitutionDate": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "category",
+                                                            "endDate",
+                                                            "name",
+                                                            "startDate"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "events",
+                                                "mrid",
+                                                "timezone",
+                                                "year"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "calendars"
+                                ]
+                            },
+                            "control_type": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "CONNECTION_POINT_EXPORT_LIMIT",
+                                        "CONNECTION_POINT_IMPORT_LIMIT",
+                                        "DER_EXPORT_LIMIT",
+                                        "DER_IMPORT_LIMIT"
+                                    ]
+                                }
+                            },
+                            "control_options": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "OP_MOD_CONNECT",
+                                        "OP_MOD_ENERGIZE",
+                                        "OP_MOD_FIXED_PF_ABSORB_W",
+                                        "OP_MOD_FIXED_PF_INJECT_W",
+                                        "OP_MOD_FIXED_VAR",
+                                        "OP_MOD_FIXED_W",
+                                        "OP_MOD_FRED_WATT",
+                                        "OP_MOD_FREQ_DROOP",
+                                        "OP_MOD_HFRT_MAY_TRIP",
+                                        "OP_MOD_HFRT_MUST_TRIP",
+                                        "OP_MOD_HVRT_MOMENTARY_CESSATION",
+                                        "OP_MOD_HVRT_MUST_TRIP",
+                                        "OP_MOD_LFRT_MAY_TRIP",
+                                        "OP_MOD_LFRT_MUST_TRIP",
+                                        "OP_MOD_LVRT_MAY_TRIP",
+                                        "OP_MOD_LVRT_MOMENTARY_CESSATION",
+                                        "OP_MOD_LVRT_MUST_TRIP",
+                                        "OP_MOD_MAX_LIM_W",
+                                        "OP_MOD_TARGET_VAR",
+                                        "OP_MOD_TARGET_W",
+                                        "OP_MOD_VOLT_VAR",
+                                        "OP_MOD_VOLT_WATT",
+                                        "OP_MOD_WATT_PF",
+                                        "OP_MOD_WATT_VAR",
+                                        "RAMP_TMS",
+                                        "CSIP",
+                                        "CSIP_AUS"
+                                    ]
+                                }
+                            },
+                            "dispatch_constraints": {
+                                "type": "object",
+                                "properties": {
+                                    "event_duration_constraint": {
+                                        "type": "object",
+                                        "properties": {
+                                            "min": {
+                                                "type": "number"
+                                            },
+                                            "max": {
+                                                "type": "number"
+                                            }
+                                        }
+                                    },
+                                    "cumulative_event_duration": {
+                                        "type": "object"
+                                    },
+                                    "max_number_of_events_per_timeperiod": {
+                                        "type": "object"
+                                    }
+                                },
+                                "required": [
+                                    "cumulative_event_duration",
+                                    "event_duration_constraint",
+                                    "max_number_of_events_per_timeperiod"
+                                ]
+                            },
+                            "avail_service_windows": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "start_hour": {
+                                            "type": "integer"
+                                        },
+                                        "end_hour": {
+                                            "type": "integer"
+                                        },
+                                        "mon": {
+                                            "type": "boolean"
+                                        },
+                                        "tue": {
+                                            "type": "boolean"
+                                        },
+                                        "wed": {
+                                            "type": "boolean"
+                                        },
+                                        "thu": {
+                                            "type": "boolean"
+                                        },
+                                        "fri": {
+                                            "type": "boolean"
+                                        },
+                                        "sat": {
+                                            "type": "boolean"
+                                        },
+                                        "sun": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "end_hour",
+                                        "fri",
+                                        "id",
+                                        "mon",
+                                        "sat",
+                                        "start_hour",
+                                        "sun",
+                                        "thu",
+                                        "tue",
+                                        "wed"
+                                    ]
+                                }
+                            },
+                            "demand_management_constraints": {
+                                "type": "object",
+                                "properties": {
+                                    "max_total_energy_per_timeperiod": {
+                                        "type": "integer"
+                                    },
+                                    "max_total_energy_unit": {
+                                        "type": "string"
+                                    },
+                                    "timeperiod": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "max_total_energy_per_timeperiod",
+                                    "max_total_energy_unit",
+                                    "timeperiod"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "end_date",
+                            "id",
+                            "name",
+                            "program_type",
+                            "start_date"
+                        ]
+                    },
+                    "contract": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "contract_type": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "contract_type",
+                            "id"
+                        ]
+                    },
+                    "enrollment": {
+                        "type": "object",
+                        "properties": {
+                            "der_id": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "der_id"
+                        ]
+                    }
+                },
+                "required": [
+                    "contract",
+                    "enrollment",
+                    "program"
+                ]
+            }
+        }
+    }
+}

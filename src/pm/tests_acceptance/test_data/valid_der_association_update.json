@@ -1,0 +1,14 @@
+[
+    {
+        "asset_type": "EV_CHRG_STN",
+        "der_id": "695e9195-ea0b-4360-a101-e8581b02ccc4",
+        "id": 1,
+        "limit_unit": "kW"
+    },
+    {
+        "asset_type": "BESS",
+        "der_id": "f864e972-17a5-4aa8-81ad-5945451200dd",
+        "id": 2,
+        "limit_unit": "MW"
+    }
+]
